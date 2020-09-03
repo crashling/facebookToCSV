@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>FB Fundraiser to CSV Converter</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+
+            div {margin-left: 1em; margin-right: 1em}
+            li {padding: .5em}
+            p {padding: 0; margin: 0 }
+
+            button {padding: 3px;}
+        </style>
+        <script>
+            function init() {
+                document.getElementById("fundraiserText").value = "";
+                document.getElementById("matched").value = "";
+            }
+            window.onload = init;
+
+            function createCsv() {
+                var text = document.getElementById("fundraiserText").value;
+                var matched = (document.getElementById("matched").value);
+                if (text === "" || matched === "") {
+                    if (text === "") {
+                        document.getElementById("fundraiserTextPrompt").style.color = "red";
+                        document.getElementById("fundraiserTextPrompt").style.textDecoration = "underline";
+                    }
+                    if (matched === "") {
+                        document.getElementById("matchedPrompt").style.color = "red";
+                        document.getElementById("matchedPrompt").style.textDecoration = "underline";
+                    }
+                } else {
+                    matched = matched.match(/\d/g);
+                    matched = parseInt(matched.join(""));
+                    var foundation = text.match("\nFundraiser for .+ by").toString();
+                    foundation = foundation.substring(16, foundation.length - 3);
+
+                    var amounts = new Array();
+                    var lines = new Array();
+                    var c = 0;
+                    var name, udate, date, amount;
+                    text.match(/.+ donated .+\n.+GMT./g).forEach((e) => {
+                        name = e.match(/.+?(?= donated)/).toString();
+                        amount = e.match(/donated .+\n/).toString();
+                        amount = amount.match(/\d/g).join("");
+                        date = e.match(/[0-9]{10},.+ GMT./).toString();
+                        amounts[c] = amount;
+                        lines[c++] = "\"" + foundation + "\",\"" + name + "\"," + date + "," + amount + ",";
+
+                    });
+                    amounts.reverse();
+                    lines.reverse();
+                    var match;
+                    for (var i = 0; i < lines.length; i++) {
+                        match = Math.min(matched, amounts[i]);
+                        matched -= match;
+                        lines[i] += match;
+                    }
+
+                    document.getElementById("preInstructions").hidden = true;
+                    var s = "\"foundation\",\"name\",\"unixDate\",\"date\",\"amount\",\"matched\"";
+                    var i = 0;
+                    lines.forEach((e) => {
+                        s += "\n" + e;
+                    });
+
+                    var element = document.createElement('a');
+                    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(s));
+                    element.setAttribute('download', foundation.split(' ').join('_') + "_" + lines.length + ".csv");
+
+                    element.style.display = 'none';
+                    document.body.appendChild(element);
+
+                    element.click();
+
+                    document.body.removeChild(element);
+                    document.getElementById("postInstructions").hidden = false;
+                }
+            }
+        </script>
+    </head>
+    <body>
+
+        <div id="preInstructions">
+            <h4>This page is currently not fail-safe at all. So if anything goes wrong, just reload the page.</h4>
+            <ul>
+                <li><p>Copy the following code:</p>
+                    <div style="border: 1px solid #bbbbbb"><code id="bookmarkCode">javascript:(() => {const expandDates = (nodes) => { for (const abbr of nodes) { if (!abbr.querySelector('.full-timestamp')) { abbr.insertAdjacentHTML('beforeend'," (" + abbr.dataset.utime + ",\"" + new Date(abbr.dataset.utime * 1000).toUTCString() + "\")"); } } }; expandDates(document.querySelectorAll('abbr[data-utime]')); setMutationHandler(document, 'abbr[data-utime]', expandDates); })();</code></div>
+                </li>
+
+                <li><p>Create a new bookmark and paste the above code into <b>location</b> (where you would usually put the URL).</p></li>
+                <li><p>While on the page for a specific Facebook Fundraiser of yours (you must be logged in as the creator of the Fundraiser), press the new bookmark you created.</p></li>
+                <li id="fundraiserTextPrompt"><p>Select the entire page and copy it. Paste into this box:</p>
+                    <textarea id="fundraiserText" rows="10" cols="50" placeholder="copy text from fundraiser into here..."></textarea>
+                </li>
+                <li  id="matchedPrompt"><p>Enter the amount matched:</p>
+                    <input id="matched" type="text" placeholder="matched...">
+                </li>
+                <li>
+                    <button onclick="createCsv()"><b>Create CSV</b></button>
+                    <p>Save the file when your browser prompts you.</p>
+                </li>
+            </ul>
+        </div>
+        <div hidden="true" id="postInstructions">
+            <h2>Great! Now you should have downloaded a .csv file.</h2>
+            <ul>
+                <li><a href="https://docs.google.com/spreadsheets/d/1wT4qbmjYKrT-IPBuQjGmQcxiHKxqLtOZ1JjBVbIvpDk/edit?usp=sharing" target="_blank">Click here to go to the shared Google Sheet</a></li>
+                <li>Select <b>Import</b> from the <b>File</b> menu.</li>
+                <li>In the Import File Box, go to the <b>Upload</b> tab and upload the .csv file.</li>
+                <li><b>IMPORTANT:</b> After the file uploads, a box asks you for <b>Import Location</b>. Select <b>Append to current sheet</b>, then press <b>Import Data</b>.</li>
+            </ul>
+        </div>
+    </body>
+</html>
